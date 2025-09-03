@@ -5,12 +5,9 @@ import fetch from "node-fetch";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebApi } from "azure-devops-node-api";
 import { z } from "zod";
-// import { TestOutcome } from "azure-devops-node-api/interfaces/TestInterfaces.js";
 
 const Test_Log_Tools = {
-  testresults_resultsbybuild: "testresults_resultsbybuild",
   testlogs_listbyrun: "testlogs_listbyrun",
-  // testattachment_getcontent: "testattachment_getcontent",
   testresults_testlogstoreendpoint: "testresults_testlogstoreendpoint",
 };
 
@@ -46,8 +43,23 @@ function configureTestLogTools(
       filePath: z.string().describe("The file path of the attachment (filename, including any subfolders if present)."),
     },
     async ({ project, runId, filePath }) => {
+      const MAX_RETRIEVAL_SIZE_BYTES = 3 * 1024 * 1024;
+      const MAX_CHARS = 10000;
+
       const connection = await connectionProvider();
       const testResultsApi = await connection.getTestResultsApi();
+      const attachments = await testResultsApi.getTestRunAttachments(project, runId);
+
+      const attachment = attachments.find(a => a.fileName === filePath);
+      if (!attachment || !attachment.size)
+      {
+        return { content: [{ type: "text", text: "Test log not retrieved: attachment not found or size is unknown." }] };
+      }
+
+      if (attachment.size > MAX_RETRIEVAL_SIZE_BYTES) {
+        return { content: [{ type: "text", text: "Test log not retrieved: attachment exceeds 3MB limit" }] };
+      }
+
       const endpointDetails = await testResultsApi.getTestLogStoreEndpointDetailsForRunLog(project, runId, 1, filePath);
       const sasUri = endpointDetails?.endpointSASUri;
       const endpointType = endpointDetails?.endpointType;
@@ -71,6 +83,9 @@ function configureTestLogTools(
       const nonPrintable = /[\uFFFD]/.test(text) || /[\x00-\x08\x0E-\x1F]/.test(text);
       if (nonPrintable) {
         text = `BASE64:${buffer.toString("base64")}`;
+      }
+      if (text.length > MAX_CHARS) {
+        text = text.slice(0, MAX_CHARS) + `\n(output is truncated to prevent excessive token consumption. Total size was ${attachment.size})`;
       }
       return { content: [{ type: "text", text }] };
     }
