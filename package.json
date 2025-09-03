@@ -1,6 +1,6 @@
 {
-  "name": "@azure-devops/mcp",
-  "version": "2.0.0",
+  "name": "@azure-devops/mcp-jusiever-fork",
+  "version": "2.0.1",
   "description": "MCP server for interacting with Azure DevOps",
   "license": "MIT",
   "author": "Microsoft Corporation",
@@ -42,6 +42,7 @@
     "azure-devops-extension-api": "^4.252.0",
     "azure-devops-extension-sdk": "^4.0.2",
     "azure-devops-node-api": "^15.1.0",
+    "node-fetch": "^3.3.2",
     "yargs": "^18.0.0",
     "zod": "^3.25.63",
     "zod-to-json-schema": "^3.24.5"
